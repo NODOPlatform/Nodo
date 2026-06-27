@@ -18,6 +18,12 @@
 
 ---
 
+## 🚀 ¿Quieres contribuir?
+
+👉 **Empieza aquí:** [START_HERE.md](START_HERE.md)
+
+---
+
 ## NODO no compite con otras plataformas humanitarias. Las conecta.
 
 NODO es la infraestructura que permite que plataformas independientes de ayuda humanitaria trabajen juntas. Una sola busqueda consulta todas las fuentes, fusiona resultados, elimina duplicados, verifica la evidencia y presenta un unico resultado consolidado.

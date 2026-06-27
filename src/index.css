@@ -1,0 +1,184 @@
+@import "tailwindcss";
+
+@theme {
+  --color-nodo-red: #dc2626;
+  --color-nodo-dark: #0f1724;
+  --color-nodo-card: #1a2332;
+  --color-nodo-border: #2a3545;
+  --color-nodo-text: #f1f5f9;
+  --color-nodo-muted: #94a3b8;
+  --color-brand-gold: #D4951A;
+  --color-brand-blue: #245DA5;
+  --color-brand-red: #CF2E2E;
+  --color-brand-navy: #172340;
+}
+
+html, body, #app {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--color-nodo-dark);
+  color: var(--color-nodo-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: contain;
+}
+
+* { box-sizing: border-box }
+
+input, select, textarea {
+  font-size: 16px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0 }
+  to { opacity: 1 }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px) }
+  to { opacity: 1; transform: translateY(0) }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95) }
+  to { opacity: 1; transform: scale(1) }
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0 }
+  100% { background-position: -200% 0 }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1) }
+  50% { opacity: 0.6; transform: scale(0.85) }
+}
+
+.animate-fade-in { animation: fadeIn 0.3s ease-out both }
+.animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16,1,0.3,1) both }
+.animate-scale-in { animation: scaleIn 0.25s ease-out both }
+
+@keyframes ticker-scroll {
+  0% { transform: translateX(0) }
+  100% { transform: translateX(-50%) }
+}
+.animate-ticker {
+  display: inline-block;
+  animation: ticker-scroll 18s linear infinite;
+  padding-right: 60px;
+}
+.animate-ticker:hover { animation-play-state: paused }
+
+@keyframes banner-scan {
+  0%, 100% { background-position: 0% 0% }
+  50% { background-position: 0% 100% }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--color-nodo-card) 25%, var(--color-nodo-border) 50%, var(--color-nodo-card) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+/* Glass */
+.glass {
+  background: rgba(15,23,36,0.82);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px }
+::-webkit-scrollbar-track { background: transparent }
+::-webkit-scrollbar-thumb { background: var(--color-nodo-border); border-radius: 2px }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none }
+.scrollbar-hide::-webkit-scrollbar { display: none }
+
+/* Leaflet popups */
+.leaflet-popup-content-wrapper {
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35) !important;
+  overflow: hidden !important;
+}
+.leaflet-popup-content {
+  margin: 14px 16px !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+.leaflet-popup-close-button {
+  top: 8px !important;
+  right: 10px !important;
+  font-size: 20px !important;
+  color: #888 !important;
+}
+
+/* Three lines — brand decorative element */
+.nodo-lines {
+  display: flex;
+  gap: 3px;
+  justify-content: center;
+}
+.nodo-lines span {
+  display: block;
+  width: 24px;
+  height: 3px;
+  border-radius: 2px;
+}
+.nodo-lines span:nth-child(1) { background: var(--color-brand-red) }
+.nodo-lines span:nth-child(2) { background: var(--color-brand-gold) }
+.nodo-lines span:nth-child(3) { background: var(--color-brand-blue) }
+
+.nodo-lines--sm span { width: 16px; height: 2px }
+.nodo-lines--lg span { width: 32px; height: 4px }
+
+/* Circle pattern — brand background texture */
+.nodo-pattern {
+  background-image: radial-gradient(circle, var(--color-nodo-border) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.03;
+}
+
+/* Stagger children animations */
+.stagger > * { animation: slideUp 0.4s cubic-bezier(0.16,1,0.3,1) both }
+.stagger > *:nth-child(1) { animation-delay: 0ms }
+.stagger > *:nth-child(2) { animation-delay: 60ms }
+.stagger > *:nth-child(3) { animation-delay: 120ms }
+.stagger > *:nth-child(4) { animation-delay: 180ms }
+.stagger > *:nth-child(5) { animation-delay: 240ms }
+.stagger > *:nth-child(6) { animation-delay: 300ms }
+
+
+/* Quick access scroll — mobile */
+.quick-scroll {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+.quick-scroll > * { scroll-snap-align: start }
+
+/* Scroll fade hint */
+.scroll-fade {
+  position: relative;
+}
+.scroll-fade::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 36px;
+  background: linear-gradient(to right, transparent, var(--color-nodo-dark));
+  pointer-events: none;
+  z-index: 1;
+}
+@media (min-width: 640px) {
+  .scroll-fade::after { display: none }
+}

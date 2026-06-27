@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#172340" />
+  <title>NODO — Sin conexion</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f1724; color: #f1f5f9;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      text-align: center; padding: 2rem;
+    }
+    .logo { width: 64px; height: 64px; background: #dc2626; border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px; font-weight: bold; margin: 0 auto 1.5rem; }
+    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    p { color: #9ca3af; font-size: 0.9rem; margin-bottom: 1rem; }
+    button { background: #dc2626; color: white; border: none; padding: 12px 24px;
+      border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+    button:active { transform: scale(0.98); }
+  </style>
+</head>
+<body>
+  <div>
+    <div class="logo">N</div>
+    <h1>Sin conexion</h1>
+    <p>No hay conexion a internet disponible. Los datos enviados previamente se sincronizaran cuando vuelvas a conectarte.</p>
+    <button onclick="location.reload()">Reintentar</button>
+  </div>
+</body>
+</html>

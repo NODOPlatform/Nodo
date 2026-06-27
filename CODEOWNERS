@@ -1,0 +1,36 @@
+# NODO — Code Owners
+# Cada linea define quien debe aprobar cambios en cada area.
+# Formato: patron @usuario-github
+# Documentacion: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# --- Proyecto completo (owner principal) ---
+# * @nodo-venezuela/core
+
+# --- Federation Engine ---
+# src/lib/connect/ @nodo-venezuela/federation
+
+# --- Conectores individuales ---
+# src/lib/connect/connectors/ @nodo-venezuela/connectors
+
+# --- Frontend y componentes ---
+# src/pages/ @nodo-venezuela/frontend
+# src/components/ @nodo-venezuela/frontend
+
+# --- Design System ---
+# src/design/ @nodo-venezuela/design
+
+# --- Stores y logica ---
+# src/store/ @nodo-venezuela/core
+# src/lib/ @nodo-venezuela/core
+
+# --- Base de datos ---
+# supabase/ @nodo-venezuela/core
+
+# --- Documentacion ---
+# onboarding/ @nodo-venezuela/docs
+# *.md @nodo-venezuela/docs
+
+# --- CI/CD y configuracion ---
+# .github/ @nodo-venezuela/core
+# vite.config.ts @nodo-venezuela/core
+# tsconfig*.json @nodo-venezuela/core

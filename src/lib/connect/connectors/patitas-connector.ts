@@ -1,0 +1,133 @@
+// NODO Connect — Connector 006: Patitas a Salvo Venezuela
+// Type: manual (ECONNREFUSED, no API available)
+// First pet connector. Template for future animal rescue platforms.
+
+import type { EntityRecord } from './multi-entity-connector'
+import { registerMultiEntityConnector } from './multi-entity-connector'
+
+export const RECORDS: EntityRecord[] = [
+  {
+    id: 'pas-001', entityType: 'pet',
+    name: 'Luna', secondaryName: 'Perra mestiza mediana',
+    age: 3, status: 'missing',
+    city: 'Caracas', state: 'Distrito Capital', location: 'Chacao, Av. Francisco de Miranda',
+    phone: null, photoUrl: null,
+    description: 'Perra mestiza color marron claro, tamano mediano. Collar rojo. Se escapo durante el sismo. Responde a su nombre.',
+    sourceUrl: 'https://patitasasalvo.com', publishedAt: '2026-06-25T18:00:00Z', updatedAt: null,
+    organization: 'Patitas a Salvo Venezuela', confidence: 'medium',
+    metadata: { species: 'Perro', breed: 'Mestiza', sex: 'Hembra', color: 'Marron claro', collar: 'Rojo', chip: false },
+  },
+  {
+    id: 'pas-002', entityType: 'pet',
+    name: 'Max', secondaryName: 'Perro pastor aleman',
+    age: 5, status: 'found',
+    city: 'Valencia', state: 'Carabobo', location: 'Naguanagua, Parque Fernando Penalver',
+    phone: '0241-8001234', photoUrl: null,
+    description: 'Pastor aleman macho encontrado desorientado en el parque. Sin collar. Tiene chip pero no se pudo leer. En refugio temporal.',
+    sourceUrl: 'https://patitasasalvo.com', publishedAt: '2026-06-26T08:00:00Z', updatedAt: '2026-06-27T10:00:00Z',
+    organization: 'Patitas a Salvo Venezuela', confidence: 'high',
+    metadata: { species: 'Perro', breed: 'Pastor Aleman', sex: 'Macho', color: 'Negro y fuego', chip: true },
+  },
+  {
+    id: 'pas-003', entityType: 'pet',
+    name: 'Michi', secondaryName: 'Gato siames',
+    age: 2, status: 'missing',
+    city: 'Caracas', state: 'Distrito Capital', location: 'Altamira, Residencias Los Palos Grandes',
+    phone: null, photoUrl: null,
+    description: 'Gato siames, ojos azules. Se escapo por ventana rota tras el sismo. Muy asustadizo.',
+    sourceUrl: 'https://patitasasalvo.com', publishedAt: '2026-06-25T20:00:00Z', updatedAt: null,
+    organization: 'Patitas a Salvo Venezuela', confidence: 'medium',
+    metadata: { species: 'Gato', breed: 'Siames', sex: 'Macho', color: 'Crema con extremidades oscuras', chip: false },
+  },
+  {
+    id: 'pas-004', entityType: 'pet',
+    name: 'Canela', secondaryName: 'Perra criolla pequena',
+    age: 7, status: 'reunited',
+    city: 'Maracay', state: 'Aragua', location: 'El Limon',
+    phone: null, photoUrl: null,
+    description: 'Reunida con su familia el 26 de junio gracias a publicacion en redes. Encontrada en El Limon.',
+    sourceUrl: 'https://patitasasalvo.com', publishedAt: '2026-06-25T22:00:00Z', updatedAt: '2026-06-26T16:00:00Z',
+    organization: 'Patitas a Salvo Venezuela', confidence: 'high',
+    metadata: { species: 'Perro', breed: 'Criolla', sex: 'Hembra', color: 'Canela', chip: false },
+  },
+  {
+    id: 'pas-005', entityType: 'pet',
+    name: 'Firulais', secondaryName: 'Perro mestizo grande',
+    age: 4, status: 'shelter',
+    city: 'Barquisimeto', state: 'Lara', location: 'Refugio Animal Lara, Zona Industrial',
+    phone: '0251-4429876', photoUrl: null,
+    description: 'Perro grande mestizo rescatado de escombros. Herida leve en pata trasera, tratada. En refugio animal.',
+    sourceUrl: 'https://patitasasalvo.com', publishedAt: '2026-06-26T06:00:00Z', updatedAt: '2026-06-27T08:00:00Z',
+    organization: 'Patitas a Salvo Venezuela', confidence: 'high',
+    metadata: { species: 'Perro', breed: 'Mestizo', sex: 'Macho', color: 'Blanco con manchas negras', chip: false },
+  },
+  {
+    id: 'pas-006', entityType: 'pet',
+    name: 'Nieve', secondaryName: 'Gata persa blanca',
+    age: 4, status: 'missing',
+    city: 'Merida', state: 'Merida', location: 'La Parroquia, sector Los Curos',
+    phone: null, photoUrl: null,
+    description: 'Gata persa completamente blanca, ojos verdes. Desaparecida del apartamento. Muy docil.',
+    sourceUrl: 'https://patitasasalvo.com', publishedAt: '2026-06-26T10:00:00Z', updatedAt: null,
+    organization: 'Patitas a Salvo Venezuela', confidence: 'low',
+    metadata: { species: 'Gato', breed: 'Persa', sex: 'Hembra', color: 'Blanco', chip: true },
+  },
+  {
+    id: 'pas-007', entityType: 'pet',
+    name: 'Rocky', secondaryName: 'Perro pitbull',
+    age: 3, status: 'found',
+    city: 'San Cristobal', state: 'Tachira', location: 'Barrio Obrero, cerca de la cancha',
+    phone: '0276-3001122', photoUrl: null,
+    description: 'Pitbull atigrado encontrado con cadena rota. Docil. Busca dueno. En resguardo con voluntarios.',
+    sourceUrl: 'https://patitasasalvo.com', publishedAt: '2026-06-26T12:00:00Z', updatedAt: '2026-06-27T06:00:00Z',
+    organization: 'Patitas a Salvo Venezuela', confidence: 'medium',
+    metadata: { species: 'Perro', breed: 'Pitbull', sex: 'Macho', color: 'Atigrado', chip: false },
+  },
+  {
+    id: 'pas-008', entityType: 'pet',
+    name: 'Pelusa', secondaryName: 'Gata mestiza',
+    age: 1, status: 'shelter',
+    city: 'Caracas', state: 'Distrito Capital', location: 'Refugio Animales SOS Caracas, El Paraiso',
+    phone: '0212-4621199', photoUrl: null,
+    description: 'Gatita encontrada en calle, posiblemente abandonada durante evacuacion. Muy joven, vacunada.',
+    sourceUrl: 'https://patitasasalvo.com', publishedAt: '2026-06-26T14:00:00Z', updatedAt: '2026-06-27T09:00:00Z',
+    organization: 'Patitas a Salvo Venezuela', confidence: 'high',
+    metadata: { species: 'Gato', breed: 'Mestiza', sex: 'Hembra', color: 'Gris atigrado', chip: false },
+  },
+  {
+    id: 'pas-009', entityType: 'pet',
+    name: 'Thor', secondaryName: 'Perro rottweiler',
+    age: 6, status: 'missing',
+    city: 'Ciudad Bolivar', state: 'Bolivar', location: 'Paseo Orinoco, Casco Historico',
+    phone: null, photoUrl: null,
+    description: 'Rottweiler macho, muy grande. Se solto del patio durante la emergencia. Tiene collar azul con placa.',
+    sourceUrl: 'https://patitasasalvo.com', publishedAt: '2026-06-26T09:00:00Z', updatedAt: null,
+    organization: 'Patitas a Salvo Venezuela', confidence: 'medium',
+    metadata: { species: 'Perro', breed: 'Rottweiler', sex: 'Macho', color: 'Negro y fuego', collar: 'Azul con placa', chip: true },
+  },
+  {
+    id: 'pas-010', entityType: 'pet',
+    name: 'Coco', secondaryName: 'Loro verde',
+    age: 12, status: 'found',
+    city: 'Maracaibo', state: 'Zulia', location: 'Sector Tierra Negra',
+    phone: '0261-7884455', photoUrl: null,
+    description: 'Loro verde encontrado en arbol. Habla y dice "Coco quiere agua". Posiblemente domestico.',
+    sourceUrl: 'https://patitasasalvo.com', publishedAt: '2026-06-27T07:00:00Z', updatedAt: null,
+    organization: 'Patitas a Salvo Venezuela', confidence: 'medium',
+    metadata: { species: 'Ave', breed: 'Loro', sex: null, color: 'Verde con rojo', chip: false },
+  },
+]
+
+export function initPatitasConnector(): void {
+  registerMultiEntityConnector({
+    providerId: 'patitas-a-salvo',
+    providerName: 'Patitas a Salvo Venezuela',
+    config: {
+      type: 'manual',
+      enabled: true,
+      timeout: 5000,
+      rateLimit: { minIntervalMs: 1000, maxPerMinute: 30 },
+    },
+    records: RECORDS,
+  })
+}

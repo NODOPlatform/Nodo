@@ -1,0 +1,94 @@
+# n8n en QUEUE MODE — buffer + escala horizontal para el bot de NODO
+# Componentes: Postgres (DB de n8n) + Redis (cola/buffer) + main + worker(s) + webhook.
+# Redis con AOF (durable) y noeviction (obligatorio para BullMQ).
+# Levantar:  docker compose -f docker-compose.queue.yml --env-file .env up -d
+# Escalar workers:  docker compose -f docker-compose.queue.yml up -d --scale n8n-worker=3
+
+x-n8n-common: &n8n-common
+  image: n8nio/n8n:latest
+  restart: unless-stopped
+  environment: &n8n-env
+    EXECUTIONS_MODE: queue
+    QUEUE_BULL_REDIS_HOST: redis
+    QUEUE_BULL_REDIS_PORT: 6379
+    DB_TYPE: postgresdb
+    DB_POSTGRESDB_HOST: postgres
+    DB_POSTGRESDB_PORT: 5432
+    DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
+    DB_POSTGRESDB_USER: ${POSTGRES_USER}
+    DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+    N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+    # Tope global de ejecuciones en produccion (ajusta segun RAM/CPU)
+    N8N_CONCURRENCY_PRODUCTION_LIMIT: ${N8N_CONCURRENCY_PRODUCTION_LIMIT:-100}
+    GENERIC_TIMEZONE: America/Caracas
+    # URL PUBLICA HTTPS del webhook (Telegram la necesita). Detras de tu proxy/easypanel.
+    WEBHOOK_URL: ${WEBHOOK_URL}
+    N8N_PROTOCOL: https
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # AOF = durable (pierde <=1s ante caida). noeviction = obligatorio para BullMQ.
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # MAIN: editor/UI + registra el webhook de Telegram. NO procesa ejecuciones pesadas.
+  n8n-main:
+    <<: *n8n-common
+    environment:
+      <<: *n8n-env
+      N8N_DISABLE_PRODUCTION_MAIN_PROCESS: "true"   # el main no ejecuta; delega a workers
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8ndata:/home/node/.n8n
+
+  # WEBHOOK: recibe los updates de Telegram (alta concurrencia) y encola. Escalable.
+  n8n-webhook:
+    <<: *n8n-common
+    command: webhook
+    volumes:
+      - n8ndata:/home/node/.n8n
+
+  # WORKER: consume la cola de Redis y ejecuta los workflows. Escala horizontal aqui.
+  n8n-worker:
+    <<: *n8n-common
+    command: worker
+    environment:
+      <<: *n8n-env
+      # I/O-bound (lee Supabase): 5-10 esta bien. Sube con cuidado del pool de Postgres.
+      N8N_WORKER_CONCURRENCY: ${N8N_WORKER_CONCURRENCY:-8}
+    volumes:
+      - n8ndata:/home/node/.n8n
+
+volumes:
+  pgdata:
+  redisdata:
+  n8ndata:

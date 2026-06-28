@@ -1,0 +1,11 @@
+# Secretos / entorno — NUNCA versionar
+.env
+*.env
+!.env.example
+
+# Node
+node_modules/
+
+# Sistema
+.DS_Store
+Thumbs.db

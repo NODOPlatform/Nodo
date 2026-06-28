@@ -22,6 +22,7 @@ export interface MatchQuery {
   age?: number | null
   sex?: string
   city?: string
+  lastLocation?: string
   hospital?: string
   phone?: string
   whatsapp?: string
@@ -132,6 +133,16 @@ function scoreCandidate(query: MatchQuery, person: Person): MatchCandidate {
     addScore('city', 'Ciudad', stringSimilarity(query.city, person.city))
   }
 
+  if (query.lastLocation) {
+    const best = Math.max(
+      person.last_known_address ? stringSimilarity(query.lastLocation, person.last_known_address) : 0,
+      person.sector ? stringSimilarity(query.lastLocation, person.sector) : 0
+    )
+    if (person.last_known_address || person.sector) {
+      addScore('lastLocation', 'Ultima ubicacion', best)
+    }
+  }
+
   if (query.age != null && person.approximate_age != null) {
     addScore('age', 'Edad', ageSimilarity(query.age, person.approximate_age))
   }
@@ -167,6 +178,7 @@ export function buildMatchQuery(extracted: {
   age?: string
   sex?: string
   city?: string
+  lastLocation?: string
   hospital?: string
   phone?: string
   whatsapp?: string
@@ -179,6 +191,7 @@ export function buildMatchQuery(extracted: {
     age: extracted.age ? parseInt(extracted.age, 10) || null : null,
     sex: extracted.sex || undefined,
     city: extracted.city || undefined,
+    lastLocation: extracted.lastLocation || undefined,
     hospital: extracted.hospital || undefined,
     phone: extracted.phone || extracted.whatsapp || undefined,
     whatsapp: extracted.whatsapp || undefined,

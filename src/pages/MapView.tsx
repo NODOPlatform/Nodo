@@ -1,4 +1,4 @@
-import { useSignal } from '@preact/signals'
+import { useSignal, effect } from '@preact/signals'
 import { useEffect, useRef } from 'preact/hooks'
 import { useLocation } from 'preact-iso'
 import { supabase } from '../lib/supabase'
@@ -277,6 +277,7 @@ const HOUR_MS = 3600000
 
 export function MapView() {
   const { route } = useLocation()
+  const activeTab = useSignal<'centros' | 'daños'>('centros')
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<L.Map | null>(null)
   const markerLayer = useRef<L.LayerGroup | null>(null)
@@ -297,6 +298,9 @@ export function MapView() {
   const inputRef = useRef<HTMLInputElement>(null)
   const searchPinPos = useSignal<{ lat: number; lng: number } | null>(null)
   const searchPinTitle = useSignal('')
+
+  // Damage map state (for StatusVzla widget)
+  const damageLoading = useSignal(false)
 
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return
@@ -339,6 +343,71 @@ export function MapView() {
       markerLayer.current = null
     }
   }, [])
+
+  effect(() => {
+    if (activeTab.value === 'centros' && mapInstance.current) {
+      setTimeout(() => {
+        mapInstance.current?.invalidateSize()
+        mapInstance.current?.fitBounds(mapInstance.current.getBounds())
+      }, 100)
+    }
+  })
+
+
+  useEffect(() => {
+    if (activeTab.value !== 'daños') return
+
+    const mapContainer = document.getElementById('svzla-map')
+    if (!mapContainer) return
+
+    const loadWidget = () => {
+      fetch('https://statusvzla.com/functions/apiMapa?format=geojson')
+        .then(r => r.json())
+        .then(data => {
+          const mapContainer = document.getElementById('svzla-map')
+          if (!mapContainer) return
+
+          const map = L.map('svzla-map').setView([10.48, -66.90], 8)
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map)
+
+          const colores: Record<string, string> = {
+            leve: '#D97706',
+            moderado: '#EA580C',
+            grave: '#DC2626',
+            critico: '#991B1B',
+            colapsado: '#450A0A',
+            no_evaluado: '#6B7280',
+          }
+
+          const htmlEsc = (s: string = '') => String(s).replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+          }[c] || c))
+
+          const getSafeUrl = (url: string) => {
+            try {
+              const u = new URL(url)
+              if (u.protocol === 'http:' || u.protocol === 'https:') return u.toString()
+            } catch {}
+            return '#'
+          }
+
+          L.geoJSON(data, {
+            pointToLayer: (f: any, latlng: any) => {
+              const c = colores[f.properties.nivel_dano] || '#6B7280'
+              return L.circleMarker(latlng, { radius: 7, fillColor: c, color: '#fff', weight: 1, fillOpacity: 0.9 })
+            },
+            onEachFeature: (f: any, layer: any) => {
+              const p = f.properties
+              const safeUrl = getSafeUrl(p.url || '')
+              layer.bindPopup(`<b>${htmlEsc(p.nombre || 'Sin nombre')}</b><br>Daño: ${htmlEsc(p.nivel_dano)}<br><a href="${htmlEsc(safeUrl)}" target="_blank" rel="noopener noreferrer">Ver detalle ↗</a>`)
+            },
+          }).addTo(map)
+        })
+        .catch(err => console.error('Error loading StatusVzla widget:', err))
+    }
+
+    loadWidget()
+  }, [activeTab.value])
 
   async function loadMapData(map: L.Map) {
     loading.value = true
@@ -515,7 +584,7 @@ export function MapView() {
           }
         }
       }
-    } catch {}
+    } catch { }
 
     markers.value = allMarkers
     renderMarkers(map, allMarkers, activeLayers.value, helpTypeFilter.value)
@@ -824,172 +893,214 @@ export function MapView() {
     if (mapInstance.current) loadMapData(mapInstance.current)
   }
 
+
   return (
     <div style="position:relative;height:calc(100vh - 120px);overflow:hidden">
-      {/* Map fills entire container */}
-      <div ref={mapRef} style="position:absolute;top:0;left:0;right:0;bottom:0" />
+      {/* Tabs */}
+      <div style="position:absolute;top:0;left:0;right:0;z-index:9998;background:rgba(15,23,41,0.95);border-bottom:1px solid rgba(255,255,255,0.08);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;height:48px">
+        <button
+          onClick={() => { activeTab.value = 'centros' }}
+          style={`flex:1;padding:12px 16px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:600;${activeTab.value === 'centros' ? 'color:#3b82f6;border-bottom:2px solid #3b82f6' : 'color:#9ca3af;border-bottom:2px solid transparent'}`}
+        >
+          🏢 Centros de acopio
+        </button>
+        <button
+          onClick={() => { activeTab.value = 'daños' }}
+          style={`flex:1;padding:12px 16px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:600;${activeTab.value === 'daños' ? 'color:#ef4444;border-bottom:2px solid #ef4444' : 'color:#9ca3af;border-bottom:2px solid transparent'}`}
+        >
+          ⚠️ Daños
+        </button>
+      </div>
 
-      {/* Search bar - floats above map */}
-      <div style="position:absolute;top:12px;left:12px;right:12px;z-index:10000">
-        <div style="display:flex;gap:8px">
-          {/* Back button */}
-          <button
-            style="width:44px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(15,23,41,0.92);border-radius:12px;border:1px solid rgba(255,255,255,0.08);color:white;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)"
-            aria-label="Volver"
-            onClick={() => route('/')}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-          </button>
+      {/* Centros de acopio tab */}
+      <div style={`position:absolute;top:48px;left:0;right:0;bottom:0;overflow:hidden;display:${activeTab.value === 'centros' ? 'block' : 'none'}`}>
+        {/* Map fills entire container */}
+        <div ref={mapRef} style="position:absolute;top:0;left:0;right:0;bottom:0" />
 
-          {/* Search input */}
-          <div style="flex:1;position:relative">
-            <div style="display:flex;align-items:center;background:rgba(15,23,41,0.92);border-radius:12px;border:1px solid rgba(255,255,255,0.08);overflow:hidden;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)">
-              <span style="padding-left:12px;font-size:16px;flex-shrink:0">🔍</span>
-              <input
-                ref={inputRef}
-                type="search"
-                style="flex:1;background:transparent;color:white;font-size:14px;padding:12px 8px;outline:none;border:none;min-width:0"
-                placeholder="Buscar direccion, refugio, hospital..."
-                value={searchQuery.value}
-                onInput={(e) => handleSearchInput((e.target as HTMLInputElement).value)}
-                onFocus={() => { if (searchResults.value.length > 0) searchOpen.value = true }}
-                autoComplete="off"
-                enterKeyHint="search"
-              />
-              {searchQuery.value && (
-                <button style="padding:0 12px 0 4px;color:#9ca3af;font-size:16px;background:none;border:none;cursor:pointer" onClick={clearSearch} aria-label="Limpiar">✕</button>
+        {/* Search bar - floats above map */}
+        <div style="position:absolute;top:12px;left:12px;right:12px;z-index:10000">
+          <div style="display:flex;gap:8px">
+            {/* Back button */}
+            <button
+              style="width:44px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(15,23,41,0.92);border-radius:12px;border:1px solid rgba(255,255,255,0.08);color:white;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)"
+              aria-label="Volver"
+              onClick={() => route('/')}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+            </button>
+
+            {/* Search input */}
+            <div style="flex:1;position:relative">
+              <div style="display:flex;align-items:center;background:rgba(15,23,41,0.92);border-radius:12px;border:1px solid rgba(255,255,255,0.08);overflow:hidden;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)">
+                <span style="padding-left:12px;font-size:16px;flex-shrink:0">🔍</span>
+                <input
+                  ref={inputRef}
+                  type="search"
+                  style="flex:1;background:transparent;color:white;font-size:14px;padding:12px 8px;outline:none;border:none;min-width:0"
+                  placeholder="Buscar direccion, refugio, hospital..."
+                  value={searchQuery.value}
+                  onInput={(e) => handleSearchInput((e.target as HTMLInputElement).value)}
+                  onFocus={() => { if (searchResults.value.length > 0) searchOpen.value = true }}
+                  autoComplete="off"
+                  enterKeyHint="search"
+                />
+                {searchQuery.value && (
+                  <button style="padding:0 12px 0 4px;color:#9ca3af;font-size:16px;background:none;border:none;cursor:pointer" onClick={clearSearch} aria-label="Limpiar">✕</button>
+                )}
+              </div>
+
+              {/* Results dropdown */}
+              {searchOpen.value && searchResults.value.length > 0 && (
+                <div style="position:absolute;top:100%;left:0;right:0;margin-top:6px;background:rgba(15,23,41,0.96);border:1px solid rgba(255,255,255,0.08);border-radius:12px;max-height:60vh;overflow-y:auto;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)">
+                  {searchResults.value.map((r, i) => {
+                    const isFirst = i === 0
+                    const prevSource = i > 0 ? searchResults.value[i - 1].source : null
+                    const showDivider = r.source === 'nominatim' && prevSource === 'nodo'
+                    return (
+                      <div key={r.id}>
+                        {showDivider && (
+                          <div style="padding:6px 12px;font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;border-top:1px solid rgba(255,255,255,0.06)">
+                            Otros lugares
+                          </div>
+                        )}
+                        {isFirst && r.source === 'nodo' && (
+                          <div style="padding:6px 12px;font-size:10px;color:#34d399;font-weight:700;text-transform:uppercase;letter-spacing:0.05em">
+                            En NODO
+                          </div>
+                        )}
+                        {isFirst && r.source === 'nominatim' && (
+                          <div style="padding:6px 12px;font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.05em">
+                            Otros lugares
+                          </div>
+                        )}
+                        <button
+                          style="width:100%;padding:10px 12px;display:flex;align-items:center;gap:10px;text-align:left;background:none;border:none;cursor:pointer;color:white"
+                          onClick={() => selectResult(r)}
+                        >
+                          <span style="font-size:18px;flex-shrink:0;width:28px;text-align:center">{r.icon}</span>
+                          <div style="flex:1;min-width:0;overflow:hidden">
+                            <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{r.title}</div>
+                            <div style="font-size:11px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{r.subtitle}</div>
+                          </div>
+                          {r.source === 'nodo' && (
+                            <span style="font-size:9px;background:rgba(6,78,59,0.6);color:#34d399;border:1px solid rgba(5,150,105,0.4);padding:2px 6px;border-radius:9999px;font-weight:700;flex-shrink:0">NODO</span>
+                          )}
+                        </button>
+                      </div>
+                    )
+                  })}
+                  {searching.value && (
+                    <div style="padding:10px 12px;font-size:12px;color:#9ca3af;text-align:center">Buscando mas resultados...</div>
+                  )}
+                </div>
+              )}
+
+              {searchOpen.value && searchResults.value.length === 0 && searchQuery.value.length >= 2 && !searching.value && (
+                <div style="position:absolute;top:100%;left:0;right:0;margin-top:6px;background:rgba(15,23,41,0.96);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;text-align:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)">
+                  <span style="font-size:14px;color:#9ca3af">No se encontraron resultados</span>
+                </div>
               )}
             </div>
 
-            {/* Results dropdown */}
-            {searchOpen.value && searchResults.value.length > 0 && (
-              <div style="position:absolute;top:100%;left:0;right:0;margin-top:6px;background:rgba(15,23,41,0.96);border:1px solid rgba(255,255,255,0.08);border-radius:12px;max-height:60vh;overflow-y:auto;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)">
-                {searchResults.value.map((r, i) => {
-                  const isFirst = i === 0
-                  const prevSource = i > 0 ? searchResults.value[i - 1].source : null
-                  const showDivider = r.source === 'nominatim' && prevSource === 'nodo'
-                  return (
-                    <div key={r.id}>
-                      {showDivider && (
-                        <div style="padding:6px 12px;font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;border-top:1px solid rgba(255,255,255,0.06)">
-                          Otros lugares
-                        </div>
-                      )}
-                      {isFirst && r.source === 'nodo' && (
-                        <div style="padding:6px 12px;font-size:10px;color:#34d399;font-weight:700;text-transform:uppercase;letter-spacing:0.05em">
-                          En NODO
-                        </div>
-                      )}
-                      {isFirst && r.source === 'nominatim' && (
-                        <div style="padding:6px 12px;font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.05em">
-                          Otros lugares
-                        </div>
-                      )}
-                      <button
-                        style="width:100%;padding:10px 12px;display:flex;align-items:center;gap:10px;text-align:left;background:none;border:none;cursor:pointer;color:white"
-                        onClick={() => selectResult(r)}
-                      >
-                        <span style="font-size:18px;flex-shrink:0;width:28px;text-align:center">{r.icon}</span>
-                        <div style="flex:1;min-width:0;overflow:hidden">
-                          <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{r.title}</div>
-                          <div style="font-size:11px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{r.subtitle}</div>
-                        </div>
-                        {r.source === 'nodo' && (
-                          <span style="font-size:9px;background:rgba(6,78,59,0.6);color:#34d399;border:1px solid rgba(5,150,105,0.4);padding:2px 6px;border-radius:9999px;font-weight:700;flex-shrink:0">NODO</span>
-                        )}
-                      </button>
-                    </div>
-                  )
-                })}
-                {searching.value && (
-                  <div style="padding:10px 12px;font-size:12px;color:#9ca3af;text-align:center">Buscando mas resultados...</div>
-                )}
-              </div>
-            )}
-
-            {searchOpen.value && searchResults.value.length === 0 && searchQuery.value.length >= 2 && !searching.value && (
-              <div style="position:absolute;top:100%;left:0;right:0;margin-top:6px;background:rgba(15,23,41,0.96);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;text-align:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)">
-                <span style="font-size:14px;color:#9ca3af">No se encontraron resultados</span>
-              </div>
-            )}
+            {/* Filter + refresh buttons */}
+            <button
+              style="width:44px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(15,23,41,0.92);border-radius:12px;border:1px solid rgba(255,255,255,0.08);color:white;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)"
+              onClick={handleRefresh}
+              aria-label="Actualizar"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6M23 20v-6h-6" /><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" /></svg>
+            </button>
+            <button
+              style="width:44px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(15,23,41,0.92);border-radius:12px;border:1px solid rgba(255,255,255,0.08);color:white;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)"
+              onClick={() => { showFilters.value = !showFilters.value }}
+              aria-label="Filtros"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
+            </button>
           </div>
-
-          {/* Filter + refresh buttons */}
-          <button
-            style="width:44px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(15,23,41,0.92);border-radius:12px;border:1px solid rgba(255,255,255,0.08);color:white;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)"
-            onClick={handleRefresh}
-            aria-label="Actualizar"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
-          </button>
-          <button
-            style="width:44px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(15,23,41,0.92);border-radius:12px;border:1px solid rgba(255,255,255,0.08);color:white;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)"
-            onClick={() => { showFilters.value = !showFilters.value }}
-            aria-label="Filtros"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-          </button>
         </div>
+
+        {/* Help type filter chip */}
+        {helpTypeFilter.value && (
+          <div style="position:absolute;top:68px;left:12px;z-index:10000;background:rgba(15,23,41,0.92);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:6px 12px;display:flex;align-items:center;gap:8px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)">
+            <span style="font-size:12px;color:white;font-weight:600">
+              {TYPE_ICONS[helpTypeFilter.value] || '📋'} {LABEL_ES[helpTypeFilter.value] || helpTypeFilter.value}
+            </span>
+            <button style="color:#fca5a5;font-size:14px;background:none;border:none;cursor:pointer;margin-left:4px" onClick={clearFilter} aria-label="Quitar filtro">✕</button>
+          </div>
+        )}
+
+        {/* Filter panel */}
+        {showFilters.value && (
+          <div style="position:absolute;top:68px;right:12px;z-index:10000;background:rgba(15,23,41,0.96);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:14px;max-height:60vh;overflow-y:auto;width:224px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)">
+            {Object.entries(MAP_LABELS).map(([key, label]) => (
+              <label key={key} style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer">
+                <input
+                  type="checkbox"
+                  checked={activeLayers.value.has(key)}
+                  onChange={() => toggleLayer(key)}
+                  style="border-radius:4px"
+                />
+                <span
+                  style={`width:12px;height:12px;border-radius:50%;flex-shrink:0;background:${MAP_COLORS[key]}`}
+                />
+                <span style="font-size:14px;color:white">{label}</span>
+              </label>
+            ))}
+          </div>
+        )}
+
+        {/* Loading overlay */}
+        {loading.value && (
+          <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;background:rgba(15,23,41,0.5);z-index:9999">
+            <Spinner size={40} />
+          </div>
+        )}
+
+        {/* Bottom action bar - shows when external search pin is placed */}
+        {searchPinPos.value && (
+          <div style="position:absolute;bottom:0;left:0;right:0;z-index:10000;background:rgba(15,23,41,0.95);border-top:1px solid rgba(255,255,255,0.06);padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom, 0px));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)">
+            <div style="text-align:center;margin-bottom:8px">
+              <p style="font-size:14px;font-weight:700;color:white;margin:0 0 2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{searchPinTitle.value}</p>
+              <p style="font-size:11px;color:#9ca3af;margin:0">Arrastra el pin para ajustar la ubicacion</p>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button
+                type="button"
+                onClick={clearSearch}
+                style="flex-shrink:0;width:48px;height:48px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:rgba(30,41,59,0.8);color:white;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px"
+                aria-label="Cancelar"
+              >✕</button>
+              <a
+                href={`/necesito-ayuda?lat=${searchPinPos.value.lat}&lng=${searchPinPos.value.lng}`}
+                style="flex:1;height:48px;border-radius:12px;background:#dc2626;color:white;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;cursor:pointer"
+              >🆘 Crear solicitud aqui</a>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Help type filter chip */}
-      {helpTypeFilter.value && (
-        <div style="position:absolute;top:68px;left:12px;z-index:10000;background:rgba(15,23,41,0.92);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:6px 12px;display:flex;align-items:center;gap:8px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)">
-          <span style="font-size:12px;color:white;font-weight:600">
-            {TYPE_ICONS[helpTypeFilter.value] || '📋'} {LABEL_ES[helpTypeFilter.value] || helpTypeFilter.value}
-          </span>
-          <button style="color:#fca5a5;font-size:14px;background:none;border:none;cursor:pointer;margin-left:4px" onClick={clearFilter} aria-label="Quitar filtro">✕</button>
-        </div>
-      )}
+      {/* Daños tab */}
+      <div style={`position:absolute;top:48px;left:0;right:0;bottom:0;overflow:hidden;display:${activeTab.value === 'daños' ? 'block' : 'none'}`}>
+        {/* Damage map */}
+        {/* <div ref={damageMapRef} style="position:absolute;top:0;left:0;right:0;bottom:0" /> */}
 
-      {/* Filter panel */}
-      {showFilters.value && (
-        <div style="position:absolute;top:68px;right:12px;z-index:10000;background:rgba(15,23,41,0.96);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:14px;max-height:60vh;overflow-y:auto;width:224px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)">
-          {Object.entries(MAP_LABELS).map(([key, label]) => (
-            <label key={key} style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer">
-              <input
-                type="checkbox"
-                checked={activeLayers.value.has(key)}
-                onChange={() => toggleLayer(key)}
-                style="border-radius:4px"
-              />
-              <span
-                style={`width:12px;height:12px;border-radius:50%;flex-shrink:0;background:${MAP_COLORS[key]}`}
-              />
-              <span style="font-size:14px;color:white">{label}</span>
-            </label>
-          ))}
-        </div>
-      )}
-
-      {/* Loading overlay */}
-      {loading.value && (
-        <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;background:rgba(15,23,41,0.5);z-index:9999">
-          <Spinner size={40} />
-        </div>
-      )}
-
-      {/* Bottom action bar - shows when external search pin is placed */}
-      {searchPinPos.value && (
-        <div style="position:absolute;bottom:0;left:0;right:0;z-index:10000;background:rgba(15,23,41,0.95);border-top:1px solid rgba(255,255,255,0.06);padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom, 0px));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)">
-          <div style="text-align:center;margin-bottom:8px">
-            <p style="font-size:14px;font-weight:700;color:white;margin:0 0 2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{searchPinTitle.value}</p>
-            <p style="font-size:11px;color:#9ca3af;margin:0">Arrastra el pin para ajustar la ubicacion</p>
-          </div>
-          <div style="display:flex;gap:8px">
-            <button
-              type="button"
-              onClick={clearSearch}
-              style="flex-shrink:0;width:48px;height:48px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:rgba(30,41,59,0.8);color:white;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px"
-              aria-label="Cancelar"
-            >✕</button>
-            <a
-              href={`/necesito-ayuda?lat=${searchPinPos.value.lat}&lng=${searchPinPos.value.lng}`}
-              style="flex:1;height:48px;border-radius:12px;background:#dc2626;color:white;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;cursor:pointer"
-            >🆘 Crear solicitud aqui</a>
+        {/* StatusVzla Widget */}
+        <div id="svzla-mapa" style="font-family:sans-serif;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;max-width:100%;margin:16px;">
+          <div id="svzla-map" style="height:500px;background:#f3f4f6;"></div>
+          <div style="padding:8px 14px;background:#0D1117;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:11px;color:#9BA5B0;">Datos: StatusVzla.com API</span>
+            <a href="https://statusvzla.com/mapa-danos" target="_blank" rel="noopener noreferrer" style="font-size:10px;font-weight:800;color:#F5C518;text-decoration:none;">Powered by StatusVzla.com ↗</a>
           </div>
         </div>
-      )}
+
+        {/* Loading overlay */}
+        {damageLoading.value && (
+          <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;background:rgba(15,23,41,0.5);z-index:9999">
+            <Spinner size={40} />
+          </div>
+        )}
+      </div>
     </div>
   )
 }

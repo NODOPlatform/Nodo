@@ -4,6 +4,7 @@ import { initDesaparecidosTerremotoConnector } from './desaparecidos-terremoto-c
 import { initVzlaAyudaConnector } from './vzlaayuda-connector'
 import { initPatitasConnector } from './patitas-connector'
 import { initReencuentroConnector } from './reencuentro-connector'
+import { initOsmHospitalesConnector } from './osm-hospitales-connector'
 
 let initialized = false
 
@@ -16,4 +17,5 @@ export function initConnectors(): void {
   initVzlaAyudaConnector()
   initPatitasConnector()
   initReencuentroConnector()
+  initOsmHospitalesConnector()
 }

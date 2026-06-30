@@ -1081,14 +1081,11 @@ export function MapView() {
       </div>
 
       {/* Daños tab */}
-      <div style={`position:absolute;top:48px;left:0;right:0;bottom:0;overflow:hidden;display:${activeTab.value === 'daños' ? 'block' : 'none'}`}>
-        {/* Damage map */}
-        {/* <div ref={damageMapRef} style="position:absolute;top:0;left:0;right:0;bottom:0" /> */}
-
-        {/* StatusVzla Widget */}
-        <div id="svzla-mapa" style="font-family:sans-serif;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;max-width:100%;margin:16px;">
-          <div id="svzla-map" style="height:500px;background:#f3f4f6;"></div>
-          <div style="padding:8px 14px;background:#0D1117;display:flex;justify-content:space-between;align-items:center;">
+      <div style={`position:absolute;top:48px;left:0;right:0;bottom:0;overflow:hidden;display:${activeTab.value === 'daños' ? 'flex' : 'none'};flex-direction:column`}>
+        {/* StatusVzla Widget - fullscreen */}
+        <div id="svzla-mapa" style="flex:1;display:flex;flex-direction:column;font-family:sans-serif;overflow:hidden;background:#f3f4f6">
+          <div id="svzla-map" style="flex:1;background:#f3f4f6"></div>
+          <div style="padding:8px 14px;background:#0D1117;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
             <span style="font-size:11px;color:#9BA5B0;">Datos: StatusVzla.com API</span>
             <a href="https://statusvzla.com/mapa-danos" target="_blank" rel="noopener noreferrer" style="font-size:10px;font-weight:800;color:#F5C518;text-decoration:none;">Powered by StatusVzla.com ↗</a>
           </div>

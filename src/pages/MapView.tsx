@@ -354,56 +354,74 @@ export function MapView() {
   })
 
 
+  const damageMapRef = useRef<L.Map | null>(null)
+
   useEffect(() => {
     if (activeTab.value !== 'daños') return
 
     const mapContainer = document.getElementById('svzla-map')
     if (!mapContainer) return
 
-    const loadWidget = () => {
-      fetch('https://statusvzla.com/functions/apiMapa?format=geojson')
-        .then(r => r.json())
-        .then(data => {
-          const mapContainer = document.getElementById('svzla-map')
-          if (!mapContainer) return
+    damageLoading.value = true
 
-          const map = L.map('svzla-map').setView([10.48, -66.90], 8)
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map)
+    const loadWidget = async () => {
+      try {
+        if (damageMapRef.current) {
+          damageMapRef.current.remove()
+          damageMapRef.current = null
+        }
 
-          const colores: Record<string, string> = {
-            leve: '#D97706',
-            moderado: '#EA580C',
-            grave: '#DC2626',
-            critico: '#991B1B',
-            colapsado: '#450A0A',
-            no_evaluado: '#6B7280',
-          }
+        const res = await fetch('https://statusvzla.com/functions/apiMapa?format=geojson')
+        const data = await res.json()
 
-          const htmlEsc = (s: string = '') => String(s).replace(/[&<>"']/g, c => ({
-            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-          }[c] || c))
+        const mapContainer = document.getElementById('svzla-map')
+        if (!mapContainer) return
 
-          const getSafeUrl = (url: string) => {
-            try {
-              const u = new URL(url)
-              if (u.protocol === 'http:' || u.protocol === 'https:') return u.toString()
-            } catch {}
-            return '#'
-          }
+        const map = L.map('svzla-map', { zoomControl: false, attributionControl: false }).setView([10.48, -66.90], 8)
+        damageMapRef.current = map
 
-          L.geoJSON(data, {
-            pointToLayer: (f: any, latlng: any) => {
-              const c = colores[f.properties.nivel_dano] || '#6B7280'
-              return L.circleMarker(latlng, { radius: 7, fillColor: c, color: '#fff', weight: 1, fillOpacity: 0.9 })
-            },
-            onEachFeature: (f: any, layer: any) => {
-              const p = f.properties
-              const safeUrl = getSafeUrl(p.url || '')
-              layer.bindPopup(`<b>${htmlEsc(p.nombre || 'Sin nombre')}</b><br>Daño: ${htmlEsc(p.nivel_dano)}<br><a href="${htmlEsc(safeUrl)}" target="_blank" rel="noopener noreferrer">Ver detalle ↗</a>`)
-            },
-          }).addTo(map)
-        })
-        .catch(err => console.error('Error loading StatusVzla widget:', err))
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map)
+        L.control.zoom({ position: 'bottomright' }).addTo(map)
+
+        const colores: Record<string, string> = {
+          leve: '#D97706',
+          moderado: '#EA580C',
+          grave: '#DC2626',
+          critico: '#991B1B',
+          colapsado: '#450A0A',
+          no_evaluado: '#6B7280',
+        }
+
+        const htmlEsc = (s: string = '') => String(s).replace(/[&<>"']/g, c => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c] || c))
+
+        const getSafeUrl = (url: string) => {
+          try {
+            const u = new URL(url)
+            if (u.protocol === 'http:' || u.protocol === 'https:') return u.toString()
+          } catch {}
+          return '#'
+        }
+
+        L.geoJSON(data, {
+          pointToLayer: (f: any, latlng: any) => {
+            const c = colores[f.properties.nivel_dano] || '#6B7280'
+            return L.circleMarker(latlng, { radius: 7, fillColor: c, color: '#fff', weight: 1, fillOpacity: 0.9 })
+          },
+          onEachFeature: (f: any, layer: any) => {
+            const p = f.properties
+            const safeUrl = getSafeUrl(p.url || '')
+            layer.bindPopup(`<b>${htmlEsc(p.nombre || 'Sin nombre')}</b><br>Daño: ${htmlEsc(p.nivel_dano)}<br><a href="${htmlEsc(safeUrl)}" target="_blank" rel="noopener noreferrer">Ver detalle ↗</a>`)
+          },
+        }).addTo(map)
+
+        setTimeout(() => map.invalidateSize(), 100)
+      } catch (err) {
+        console.error('Error loading StatusVzla widget:', err)
+      } finally {
+        damageLoading.value = false
+      }
     }
 
     loadWidget()

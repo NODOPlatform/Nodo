@@ -299,9 +299,6 @@ export function MapView() {
   const searchPinPos = useSignal<{ lat: number; lng: number } | null>(null)
   const searchPinTitle = useSignal('')
 
-  // Damage map state (for StatusVzla widget)
-  const damageLoading = useSignal(false)
-
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return
 
@@ -354,77 +351,44 @@ export function MapView() {
   })
 
 
-  const damageMapRef = useRef<L.Map | null>(null)
-
   useEffect(() => {
     if (activeTab.value !== 'daños') return
 
-    const mapContainer = document.getElementById('svzla-map')
-    if (!mapContainer) return
+    const container = document.getElementById('svzla-widget-container')
+    if (!container) return
 
-    damageLoading.value = true
+    container.innerHTML = `
+      <div id="svzla-mapa" style="font-family:sans-serif;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;max-width:100%;">
+        <div id="svzla-map" style="height:400px;background:#f3f4f6;"></div>
+        <div style="padding:8px 14px;background:#0D1117;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:11px;color:#9BA5B0;">Datos: StatusVzla.com API</span>
+          <a href="https://statusvzla.com" target="_blank" style="font-size:10px;font-weight:800;color:#F5C518;text-decoration:none;">Powered by StatusVzla.com ↗</a>
+        </div>
+      </div>
+    `
 
-    const loadWidget = async () => {
-      try {
-        if (damageMapRef.current) {
-          damageMapRef.current.remove()
-          damageMapRef.current = null
-        }
-
-        const res = await fetch('https://statusvzla.com/functions/apiMapa?format=geojson')
-        const data = await res.json()
-
-        const mapContainer = document.getElementById('svzla-map')
-        if (!mapContainer) return
-
-        const map = L.map('svzla-map', { zoomControl: false, attributionControl: false }).setView([10.48, -66.90], 8)
-        damageMapRef.current = map
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map)
-        L.control.zoom({ position: 'bottomright' }).addTo(map)
-
-        const colores: Record<string, string> = {
-          leve: '#D97706',
-          moderado: '#EA580C',
-          grave: '#DC2626',
-          critico: '#991B1B',
-          colapsado: '#450A0A',
-          no_evaluado: '#6B7280',
-        }
-
-        const htmlEsc = (s: string = '') => String(s).replace(/[&<>"']/g, c => ({
-          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-        }[c] || c))
-
-        const getSafeUrl = (url: string) => {
-          try {
-            const u = new URL(url)
-            if (u.protocol === 'http:' || u.protocol === 'https:') return u.toString()
-          } catch {}
-          return '#'
-        }
-
-        L.geoJSON(data, {
-          pointToLayer: (f: any, latlng: any) => {
-            const c = colores[f.properties.nivel_dano] || '#6B7280'
-            return L.circleMarker(latlng, { radius: 7, fillColor: c, color: '#fff', weight: 1, fillOpacity: 0.9 })
-          },
-          onEachFeature: (f: any, layer: any) => {
-            const p = f.properties
-            const safeUrl = getSafeUrl(p.url || '')
-            layer.bindPopup(`<b>${htmlEsc(p.nombre || 'Sin nombre')}</b><br>Daño: ${htmlEsc(p.nivel_dano)}<br><a href="${htmlEsc(safeUrl)}" target="_blank" rel="noopener noreferrer">Ver detalle ↗</a>`)
-          },
-        }).addTo(map)
-
-        setTimeout(() => map.invalidateSize(), 100)
-      } catch (err) {
-        console.error('Error loading StatusVzla widget:', err)
-      } finally {
-        damageLoading.value = false
+    const script = document.createElement('script')
+    script.type = 'text/javascript'
+    script.textContent = `
+fetch('https://statusvzla.com/functions/apiMapa?format=geojson')
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    var map = L.map('svzla-map').setView([10.48,-66.90],8);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+    var colores={leve:'#D97706',moderado:'#EA580C',grave:'#DC2626',critico:'#991B1B',colapsado:'#450A0A',no_evaluado:'#6B7280'};
+    L.geoJSON(data,{
+      pointToLayer:function(f,ll){
+        return L.circleMarker(ll,{radius:7,fillColor:colores[f.properties.nivel_dano]||'#6B7280',color:'#fff',weight:1,fillOpacity:0.9});
+      },
+      onEachFeature:function(f,layer){
+        var p=f.properties;
+        layer.bindPopup('<b>'+(p.nombre||'Sin nombre')+'</b><br>Daño: '+p.nivel_dano+'<br><a href="'+p.url+'" target="_blank">Ver detalle ↗</a>');
       }
-    }
-
-    loadWidget()
+    }).addTo(map);
+  })
+  .catch(function(){ document.getElementById('svzla-map').innerHTML='<p style="padding:20px;color:#999;">No se pudo cargar el mapa. / Could not load map.</p>'; });
+    `
+    container.appendChild(script)
   }, [activeTab.value])
 
   async function loadMapData(map: L.Map) {
@@ -1099,22 +1063,8 @@ export function MapView() {
       </div>
 
       {/* Daños tab */}
-      <div style={`position:absolute;top:48px;left:0;right:0;bottom:0;overflow:hidden;display:${activeTab.value === 'daños' ? 'flex' : 'none'};flex-direction:column`}>
-        {/* StatusVzla Widget - fullscreen */}
-        <div id="svzla-mapa" style="flex:1;display:flex;flex-direction:column;font-family:sans-serif;overflow:hidden;background:#f3f4f6">
-          <div id="svzla-map" style="flex:1;background:#f3f4f6"></div>
-          <div style="padding:8px 14px;background:#0D1117;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
-            <span style="font-size:11px;color:#9BA5B0;">Datos: StatusVzla.com API</span>
-            <a href="https://statusvzla.com/mapa-danos" target="_blank" rel="noopener noreferrer" style="font-size:10px;font-weight:800;color:#F5C518;text-decoration:none;">Powered by StatusVzla.com ↗</a>
-          </div>
-        </div>
-
-        {/* Loading overlay */}
-        {damageLoading.value && (
-          <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;background:rgba(15,23,41,0.5);z-index:9999">
-            <Spinner size={40} />
-          </div>
-        )}
+      <div style={`position:absolute;top:48px;left:0;right:0;bottom:0;overflow:auto;display:${activeTab.value === 'daños' ? 'block' : 'none'};background:#f3f4f6;padding:16px;box-sizing:border-box`}>
+        <div id="svzla-widget-container" style="width:100%"></div>
       </div>
     </div>
   )
